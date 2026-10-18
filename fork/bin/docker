@@ -1,0 +1,21 @@
+#!/bin/bash
+# Stand-in for `docker` when the qnx65-armv7-toolchain image is installed natively at
+# /opt/qnx650 (the cloud sandbox cannot run dockerd or reach the registry).
+# Supports exactly what luka's scripts use: `image inspect IMG` and
+# `run --rm [--platform=X] -v HOST:/src IMG bash -c SCRIPT`.
+case "$1 $2" in "image inspect") exit 0;; esac
+[ "$1" = run ] || { echo "docker-shim: unsupported: $*" >&2; exit 2; }
+shift; src=""
+while [ $# -gt 0 ]; do case "$1" in
+  --rm|--platform=*|-i|-t|-it) shift;;
+  -v) src="${2%%:/src}"; shift 2;;
+  -e) export "$2"; shift 2;;
+  -w) shift 2;;
+  -*) echo "docker-shim: unsupported flag $1" >&2; exit 2;;
+  *) shift; break;; # image name
+esac; done
+[ -n "$src" ] && ln -sfn "$(cd "$src" && pwd)" /src
+export QNX_HOST=/opt/qnx650/host/linux/x86 QNX_TARGET=/opt/qnx650/target/qnx6 QNX_CONFIGURATION=/opt/qnx650/etc/qnx
+export PATH=/opt/qnx650/host/linux/x86/usr/bin:/usr/local/bin:/usr/bin:/bin LD_LIBRARY_PATH=/opt/qnx650/host/linux/x86/usr/lib
+for d in /opt/tools/*/bin; do [ -d "$d" ] && PATH="$d:$PATH"; done
+cd /src && exec "$@"
