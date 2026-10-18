@@ -91,6 +91,21 @@ run dio_env.txt pidin -p dio_manager env                       # the LD_PRELOAD 
 run foreign_ls.txt ls -la /mnt/app /mnt/app/root
 run foreign_find.txt find /mnt/app /mnt/system -name 'mibr-*' -o -name '*altscreen*' -o -name '*carplaycluster*'
 
+# ---- Android Auto receiver: gal + libautoreceiver.so, once per card (carplay_logs/aa/) ----
+# An Android Auto cluster-display profile is made from these two files offline
+# (scripts/aa_receiver_profile.py, docs/cluster-and-rgi/ANDROID_AUTO_GUIDANCE.md).
+# Block ported from kamgurgul/mib2q-carplay's logging mod (GPL-3.0-or-later).
+if [ ! -f "$BASE/aa/gal" ]; then
+    mkdir -p "$BASE/aa"
+    [ -f /mnt/app/eso/bin/apps/gal ] && cp /mnt/app/eso/bin/apps/gal "$BASE/aa/" 2>/dev/null
+    for d in /eso/lib /mnt/app/usr/lib /mnt/app/armle/lib /mnt/app/armle/lib/dll \
+             /mnt/app/armle/usr/lib /mnt/app/root/lib-target /mnt/app/eso/lib; do
+        [ -f "$d/libautoreceiver.so" ] && { cp "$d/libautoreceiver.so" "$BASE/aa/" 2>/dev/null; break; }
+    done
+    ls -l "$BASE/aa" > "$BASE/aa/ls.txt" 2>&1
+    cksum "$BASE"/aa/gal "$BASE"/aa/libautoreceiver.so > "$BASE/aa/cksum.txt" 2>&1
+fi
+
 # ---- logs and captures from /tmp (never the shared-memory objects also living there) ----
 mkdir "$OUT/tmp"
 for f in "$SRC"/*.log "$SRC"/*.log.* "$SRC"/carplay_* "$SRC"/spatial_* "$SRC"/*.pid; do

@@ -61,3 +61,37 @@ Host tests: `tests/AaRouteStateTest.java` (64 checks) and the `owners` scenario 
 Ported from [kamgurgul/mib2q-carplay](https://github.com/kamgurgul/mib2q-carplay), which adapted
 it from [wasimlhr/mib2q-android-auto-cluster](https://github.com/wasimlhr/mib2q-android-auto-cluster).
 Both GPL-3.0-or-later.
+
+## Next: the Android Auto map video on the cluster [open]
+
+kamgurgul's cluster video (Google Maps / Waze in the cockpit) is a `gal` hook,
+`libaa_cluster_hook.so`, preloaded by a `children.gal` wrapper. It is not ported yet, for four
+reasons that each need either data from the car or a change that must be validated on it:
+
+1. **A `gal` profile for this firmware.** The hook only runs when both `libautoreceiver.so`
+   and `gal` match a known profile: it writes into receiver objects and pins two `gal`
+   addresses. For `MHI2Q_ER_AUG22_P5092` the receiver is already known (the MIBSI P5092 package
+   pins it at SHA-256 `6ef4abea8264...`, the MU0918/P5152 receiver kamgurgul validated), but
+   `gal` differs per build. The logging card now copies both files to
+   `carplay_logs/aa/` once per card; `scripts/aa_receiver_profile.py gal libautoreceiver.so`
+   then prints the profile entry.
+2. **The renderer.** `altscreen_render` decodes a fixed 1440x542 stream (`ALTSCREEN_W/H`,
+   `PortSettingsChanged` ignored, full-frame texture coordinates) and is the TCP server on
+   :19831 with legacy or v2 framing. The Android Auto cluster stream is 1920x1080 with the
+   useful 1440x540 viewport centred (margins 480x540), and kamgurgul's tee is itself a server
+   on :19821 sending raw Annex-B. So the tee has to become a :19831 client in legacy framing,
+   and the renderer has to size the decoder and crop per stream. The renderer survives phone
+   generations (the monitor adopts it), so a per-process environment cannot select the mode.
+   This touches the CarPlay renderer and needs a car to validate.
+3. **Cluster contexts.** `AltScreenModule`, the single writer of cluster contexts, has to run
+   for Android Auto to switch to ctx 81 on `VIDEO_ON`; the stock "navigation on mobile device"
+   layout must be held off while the video shows (kamgurgul's `VcMapViewGate` in
+   `ClusterService.updateGALState`); the cockpit view goes to the hook through
+   `/tmp/aa_cluster_view`; and `BAPBridge` can then use the 3D arrow overlay for Android Auto too.
+4. **Install.** A marker-gated `aa_startup.sh` as `children.gal` in
+   `smartphone_integrator.json` that also starts the renderer monitor with `gal` as the owner
+   (`dio_manager`, and with it the CarPlay monitor, is not running during an Android Auto
+   session), and its restore in the uninstaller.
+
+Order: collect `carplay_logs/aa/` on the first car session, port the hook with the P5092
+profile, then the renderer change, then contexts and install.
