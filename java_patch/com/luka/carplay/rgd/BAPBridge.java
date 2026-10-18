@@ -1069,7 +1069,14 @@ public class BAPBridge {
                     && !explicitClear
                     && hasManeuverList
                     && hasAnyManeuver;
-                if (transientNoDistance) {
+                if (transientNoDistance && primaryChanged
+                        && com.luka.carplay.core.CarPlayApp.isAndroidAutoActive()) {
+                    /* Android Auto announces each new maneuver before its first distance;
+                     * replaying the cache would show the PREVIOUS turn's distance under the
+                     * new arrow.  CarPlay sessions keep the replay unchanged (kamgurgul port). */
+                    resetActionBlinkState();
+                    sendDistanceToManeuverRaw(0, false, 0);
+                } else if (transientNoDistance) {
                     replayDistanceToManeuver();
                 } else if (distM <= 0 || shouldClearManeuver) {
                     resetActionBlinkState();
@@ -1868,6 +1875,12 @@ public class BAPBridge {
 
     private synchronized boolean startCustomRenderer() {
         if (csRef == null) {
+            return false;
+        }
+        /* Android Auto (opt-in port): BAP-only for now.  The 3D overlay needs cluster ctx 80,
+         * and AltScreenModule, the single context writer, runs only for CarPlay sessions, so
+         * gfxAvailable must not be forced while the cluster stays on stock ctx 74. */
+        if (com.luka.carplay.core.CarPlayApp.isAndroidAutoActive()) {
             return false;
         }
         try {

@@ -73,7 +73,8 @@ public final class CarPlayAppLifecycleTest {
             /* Exercise the release/publication boundary directly. With the old
              * split publication, this exact Navigation edge is discarded. */
             synchronized (stateLock) {
-                set("active", Boolean.TRUE); set("desiredContext", context);
+                set("active", Boolean.TRUE); set("owner", Integer.valueOf(CarPlayApp.OWNER_CARPLAY));
+                set("desiredContext", context);
                 set("lifecycleGeneration", Integer.valueOf(1));
             }
             Method apply = CarPlayApp.class.getDeclaredMethod("applyLifecycle",
@@ -103,6 +104,36 @@ public final class CarPlayAppLifecycleTest {
             CarPlayApp.onDeactivateAndWait();
             CarPlayApp.onActivate(context); settled();
             check(LifecycleTestModule.count(1) == 1, "worker failed to recover after exception");
+        } else if (scenario.equals("owners")) {
+            /* Modules: 0 altScreen (CarPlay), 1 rgd (both), 2 roller input (CarPlay),
+             * 3 vehicle data (CarPlay).  CarPlay session: every module. */
+            CarPlayApp.onActivate(context); settled();
+            check(CarPlayApp.isActive() && !CarPlayApp.isAndroidAutoActive(), "CarPlay owner");
+            check(CarPlayApp.sessionOwner() == CarPlayApp.OWNER_CARPLAY, "CarPlay owner id");
+            for (int i = 0; i < 4; ++i)
+                check(LifecycleTestModule.count(i) == 1, "CarPlay module " + i);
+            /* Phone swap straight to Android Auto: route guidance restarts, the CarPlay-only
+             * modules do not, CarPlay callers see no CarPlay session, and CarPlay's OPS
+             * presentation is released although no deactivate came in between. */
+            IContext aa = new IContext() { };
+            CarPlayApp.onActivateAndroidAuto(aa); settled();
+            check(!CarPlayApp.isActive() && CarPlayApp.isAndroidAutoActive() && CarPlayApp.isSessionActive(),
+                "Android Auto owner");
+            check(LifecycleTestModule.count(1) == 2, "route guidance not restarted for Android Auto");
+            check(LifecycleTestModule.count(0) == 1 && LifecycleTestModule.count(2) == 1
+                && LifecycleTestModule.count(3) == 1, "CarPlay-only module started for Android Auto");
+            check(com.luka.carplay.pdc.PdcSmallStageGuard.disconnects == 1, "OPS not released on hand-over");
+            /* A late CarPlay disconnect must not end the Android Auto session. */
+            CarPlayApp.onDeactivate(); Thread.sleep(500); settled();
+            check(CarPlayApp.isAndroidAutoActive() && LifecycleTestModule.count(1) == 2, "stale CarPlay deactivate");
+            /* Repeated ACTIVATING of the same Android Auto device is not a restart. */
+            CarPlayApp.onActivateAndroidAuto(aa); settled();
+            check(LifecycleTestModule.count(1) == 2, "repeated Android Auto activation restarted modules");
+            /* Android Auto gone: no CarPlay OPS cleanup for an Android session. */
+            CarPlayApp.onDeactivateAndroidAuto(); Thread.sleep(500); settled();
+            check(!CarPlayApp.isSessionActive() && CarPlayApp.sessionOwner() == CarPlayApp.OWNER_NONE,
+                "Android Auto session not ended");
+            check(com.luka.carplay.pdc.PdcSmallStageGuard.disconnects == 1, "OPS cleanup for Android Auto");
         } else if (scenario.equals("bounce")) {
             CarPlayApp.onActivate(context); settled();
             CarPlayApp.onDeactivate(); Thread.sleep(25); CarPlayApp.onActivate(context); settled();

@@ -31,6 +31,7 @@ interoperability and research, and the project license does not relicense them.
 | `wireless/daemon/vendor/` | `iap2-link` and `iap2-csm` from LIVI by f-io (GPL-3.0-or-later), unchanged; see [provenance](docs/wireless-carplay/IAP2_VENDOR_PROVENANCE.md) |
 | `tests/carplay_lab/fixtures/diplay_mfi/` | MFi identity from the public DiPlay 0.2.16 release, not relicensed; see its README |
 | `tests/carplay_lab/legacy_ios/fixtures/ticket.shsh2` | Public restore ticket used as a lab fixture |
+| `java_patch/com/luka/carplay/aa/`, `tests/AaRouteStateTest.java`, `android_auto_*_MoreIncredibleBash/` | Android Auto bridge ported from [kamgurgul/mib2q-carplay](https://github.com/kamgurgul/mib2q-carplay), itself adapted from [wasimlhr/mib2q-android-auto-cluster](https://github.com/wasimlhr/mib2q-android-auto-cluster); both GPL-3.0-or-later, see the notes in each file |
 | `docs/sources/papers/`, `docs/sources/*.xlsx` | Papers, manuals and data sheets of their authors and publishers (Analog Devices and others) |
 
 Audi, MMI, Virtual Cockpit, Apple, CarPlay, iPhone and other names are trademarks of their

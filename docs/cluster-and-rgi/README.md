@@ -59,6 +59,7 @@ flowchart TB
 | [HUD Renderer](HUD_RENDERER.md) | The three renderers, the procedural arrow, the stock KOMO map pipeline (unused by CarPlay code), and the VC FPK state machine. |
 | [AltScreen Input Commands](../altscreen-and-video/ALTSCREEN_INPUT_COMMANDS.md) | Native roller cadence, priority, immutable selected age, state ACKs and CF ownership; preserves the BAP reply. |
 | [Third-party Nav Apps](THIRD_PARTY_NAV_APPS.md) | Why Waze and AMap send no usable RGI, `updateViewArea`, `CMD_ALT_ZOOM`, and the cluster scene URL. |
+| [Android Auto Guidance](ANDROID_AUTO_GUIDANCE.md) | Opt-in Android Auto turn-by-turn on the VC and HUD through the CarPlay route-guidance chain: session owners, `injectLocal`, the marker, what is not ported yet. |
 | [CarPlay Telephony](CARPLAY_TELEPHONY.md) | CarPlay calls, actions, recents/favorites, mic mute, missed calls and signal on the cluster telephone tab: the gated PHONE 0x28 service, status and the on-car checks (working on the car since 2026-09-23). |
 | [VC Telephone Tab](VC_TELEPHONE_TAB.md) | How the VC telephone tab reads PHONE 0x28: `mobileConnectionType` and the CarPlay note, callOptions, mute, lists, and the steering-wheel Tel key on the VC and HU sides. |
 | [iAP2 Communications](IAP2_COMMUNICATIONS.md) | iAP2 call state, communications, hold/mute and list updates: every parameter, the Identify rules and the iOS/Cinemo/car evidence. |

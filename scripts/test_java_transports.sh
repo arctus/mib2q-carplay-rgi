@@ -73,6 +73,15 @@ mkdir -p "$TEST_DIR/altctl"
     "$PROJECT_DIR/tests/AltscreenControlTransportTest.java"
 "$TEST_JDK/bin/java" -cp "$TEST_DIR/altctl:$PROJECT_DIR/build/carplay_hook.jar" com.luka.carplay.core.AltscreenControlTransportTest
 
+# Android Auto adapter (ported from kamgurgul/mib2q-carplay): event sequence -> RouteGuidance
+# text frames, parked start, lanes.
+mkdir -p "$TEST_DIR/aa"
+"$TEST_JDK/bin/javac" -encoding UTF-8 \
+    -cp "$PROJECT_DIR/build/carplay_hook.jar:$PROJECT_DIR/java_stock/US_MU1316_lsd.jar" -d "$TEST_DIR/aa" \
+    "$PROJECT_DIR/tests/AaRouteStateTest.java"
+"$TEST_JDK/bin/java" -cp "$TEST_DIR/aa:$PROJECT_DIR/build/carplay_hook.jar:$PROJECT_DIR/java_stock/US_MU1316_lsd.jar" \
+    com.luka.carplay.aa.AaRouteStateTest
+
 # Exercise the actual lifecycle worker against controllable external modules.
 mkdir -p "$TEST_DIR/lifecycle"
 "$TEST_JDK/bin/javac" -encoding UTF-8 -d "$TEST_DIR/lifecycle" \
@@ -86,7 +95,7 @@ mkdir -p "$TEST_DIR/lifecycle"
     "$PROJECT_DIR/tests/stubs/app-lifecycle/com/luka/carplay/pdc/PdcSmallStageGuard.java" \
     "$PROJECT_DIR/tests/stubs/app-lifecycle/de/audi/app/terminalmode/IContext.java" \
     "$PROJECT_DIR/tests/stubs/app-lifecycle/de/audi/atip/base/IFrameworkAccess.java"
-for scenario in publication during-start replug failure bounce; do
+for scenario in publication during-start replug failure bounce owners; do
     "$TEST_JDK/bin/java" -cp "$TEST_DIR/lifecycle" com.luka.carplay.core.CarPlayAppLifecycleTest "$scenario"
 done
 

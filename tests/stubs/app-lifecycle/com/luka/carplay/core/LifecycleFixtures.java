@@ -49,7 +49,8 @@ abstract class LifecycleTestModule implements Module {
     static int count(int index) { synchronized (gate) { return starts[index]; } }
 }
 final class AltScreenModule extends LifecycleTestModule { AltScreenModule() { super(0); } }
-final class RgdModule extends LifecycleTestModule { RgdModule() { super(1); } }
+/* CarPlayApp finds the navigation-rebind target by this name. */
+final class RgdModule extends LifecycleTestModule { RgdModule() { super(1); } public String name() { return "rgd"; } }
 final class SteeringWheelInputModule extends LifecycleTestModule { SteeringWheelInputModule() { super(2); } }
 final class VehicleDataModule extends LifecycleTestModule { VehicleDataModule() { super(3); } }
 final class AltscreenControlServer { static void start() { } }
