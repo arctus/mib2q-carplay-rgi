@@ -308,10 +308,6 @@ public final class AltScreenModule implements Module, CarplayBus.Listener {
             LOCK.notifyAll();
         }
         Log.i(TAG, "rgi send active=" + rgi + " reason=republish queued=" + rgiQueued);
-        /* Stock Navigation can publish NAVSD INITIALIZING while its map is loading.
-         * That state masks the independent CarPlay cluster plane, so keep it gated
-         * for exactly the same lifetime as our physical context ownership. */
-        AltScreenNavStatusGate.setAltScreenActive(ownCluster);
     }
 
     /** Mirror the confirmed RGI presentation to the hook, which selects the Maps cluster URL
@@ -427,9 +423,6 @@ public final class AltScreenModule implements Module, CarplayBus.Listener {
             desiredCtx = CTX_CLUSTER_MAP;
             sendRgiStateLocked();   /* navActive is false here: reset the hook's URL state */
         }
-        /* Do not wait for the stock Navigation service.  Publish ownership now;
-         * prepareCombiBAPService() applies it synchronously if the service arrives later. */
-        AltScreenNavStatusGate.setAltScreenActive(true);
         synchronized (LOCK) {
             /* Create the single persistent worker once; recreate only if it never started or died.
              * Assign the field ONLY after start() succeeds so a throw leaves worker==null for retry. */

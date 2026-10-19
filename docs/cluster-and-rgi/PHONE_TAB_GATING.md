@@ -14,7 +14,7 @@ No phone-tab gate exists in the current tree. `63e7f35` ("remove obsolete phone-
 | Late-registration replay (`registerResend`) | no | `[car]` fixed the first race |
 | Existence gate (make the slot vanish) | no | `[open]` never proven |
 
-`GatedCombiService` still exists, but it wraps only `CombiBAPServiceNavi` for route guidance and has nothing to do with the phone. `[code]` (`java_patch/com/luka/carplay/rgd/GatedCombiService.java:1-10`, installed by `java_patch/com/luka/carplay/core/AltScreenNavStatusGate.java:58-66`, `:105-112`)
+`GatedCombiService` still exists, but it wraps only `CombiBAPServiceNavi` for route guidance and has nothing to do with the phone. `[code]` (`java_patch/com/luka/carplay/rgd/GatedCombiService.java:1-10`, installed by `java_patch/com/luka/carplay/core/AltScreenNavStatusGate.java:55-60`, `:90-94`)
 
 The rest of this note is the investigation record.
 

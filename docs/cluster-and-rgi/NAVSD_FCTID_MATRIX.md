@@ -23,7 +23,7 @@ Variant legend: `S` Std, `H` HighPrem, `M` MMIKombi, `MH` MMIKombiHUD; `All` = a
 | 3 | 0x03 | FunctionList | property | All | framework | availability bitmap | stock; capability truth |
 | 4 | 0x04 | HeartBeat | protocol | All | framework | LSG liveness | stock |
 | 5-14 | - | reserved | - | none | none | - | do not use |
-| 15 | 0x0F | FSG_OperationState | property | All | `show/hideInitializingScreen()` | READY / INITIALIZING | session-gated for `appIsReady` only: altScreen ownership defers stock `showInitializingScreen` and replays it. That alone was not enough (`appState == 0`, `initState < 9`, a download or a BAP stack drop still sent INITIALIZING (3), which the VC turns into the NA "Initialising navigation system" screen over the CarPlay map), an OP_State clamp in a patched `InitializationManagerNavi` was tried and removed 2026-09-24; open ([Nav Initializing Screen](NAV_INITIALIZING_SCREEN.md)) |
+| 15 | 0x0F | FSG_OperationState | property | All | `show/hideInitializingScreen()` | READY / INITIALIZING | stock, not gated: INITIALIZING (3) puts the VC NA "Initialising navigation system" screen over the CarPlay map until stock Navigation is ready; every workaround was removed 2026-10-19 ([Nav Initializing Screen](NAV_INITIALIZING_SCREEN.md)) |
 | 16 | 0x10 | CompassInfo | property | All | `updateCompassInfo(angle, symbolic)` | heading, N/NE/… | stock |
 | 17 | 0x11 | RG_Status | property | All | `updateRGStatus(status)` | RG active; opens FctSync | CarPlay-owned for the session |
 | 18 | 0x12 | DistanceToNextManeuver | property | All | `updateDistanceToNextManeuver(dist, unit, barOn, bar)` | distance + bargraph | CarPlay-owned |
