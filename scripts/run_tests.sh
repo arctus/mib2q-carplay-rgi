@@ -118,6 +118,9 @@ done
 printf '%-32s ' altscreen_command_policy_test
 cc -std=gnu99 -O1 -Wall -Wextra -Werror tests/altscreen_command_policy_test.c -o "$OUT/alt_command_policy"
 "$OUT/alt_command_policy"
+printf '%-32s ' altscreen_cluster_layout_test
+cc -std=gnu99 -O1 -Wall -Wextra -Werror tests/altscreen_cluster_layout_test.c -o "$OUT/alt_cluster_layout"
+"$OUT/alt_cluster_layout"
 if [ "$(uname)" = Darwin ]; then CMD_STRIP=-Wl,-dead_strip; else CMD_STRIP=-Wl,--gc-sections; fi
 for suite in worker reversal age refresh night; do
     cc -std=gnu99 -O1 -Wall -Wextra -Werror -Wno-unused-variable -Wno-unused-function -Wno-unused-parameter \
@@ -380,6 +383,9 @@ bash scripts/test_install_e2e.sh
 
 printf '%-32s ' logging_mib_test
 sh scripts/test_logging_mib.sh
+
+printf '%-32s ' layout_mib_test
+sh scripts/test_layout_mib.sh
 
 printf '%-32s ' supervisor_lifecycle_test
 sh scripts/test_supervisor_lifecycle.sh
