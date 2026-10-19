@@ -130,7 +130,7 @@ It stops no processes and does not reboot.
 
 If `carplay_child.json` is missing from `mod/carplay/`, the JSON patch is skipped with a `WARN` (`:59`) and the hook never loads. If `mod/carplay/root/` is missing, the script exits with `no payload tree` (`:33`).
 
-Watch the install output for `dio_manager.json route-guidance and telephony IDs registered` (or `already registered`). A `WARN dio_manager.json …` line means the file had an unexpected layout and was left as-is; then do the [manual step](#-route-guidance-message-ids-in-dio_managerjson) before the reboot, or route guidance (maneuvers, lanes, the cluster turn card) never arrives.
+Watch the install output for `dio_manager.json: all hook message IDs registered` (or `already registered`). A `WARN dio_manager.json …` line means the file had an unexpected layout and was left as-is; then do the [manual step](#-route-guidance-message-ids-in-dio_managerjson) before the reboot, or route guidance (maneuvers, lanes, the cluster turn card) never arrives.
 
 To check an install on the unit (the mod only becomes active after a reboot):
 
@@ -318,7 +318,10 @@ Stock MU1316 P5087 lists none of them (checked against the firmware copy of `dio
 | `MessagesReceivedFromDevice` | `0x4171` | ListUpdate (recents and favorites) |
 | `MessagesSentByAccessory` | `0xA101` | VehicleStatusUpdate ([Vehicle Data To Phone](../connect-and-usb/VEHICLE_DATA_TO_PHONE.md)) |
 | `MessagesReceivedFromDevice` | `0xA100`, `0xA102` | Start/StopVehicleStatusUpdates |
+| both lists | stock `0x5000`, `0x5002`, `0xAE00`, `0xAE02`, `0xFFFB`, `0x4154`, `0x4157` sent; `0x5001`, `0xAE01`, `0xFFFA`, `0xFFFC`, `0x4155`, `0x4158` received | added back only if missing: now playing, power, location, call state and communications, which the hook also relies on |
 | `"nmea"` | bit `0x08` ORed in (`0x0003` → `0x000B`) | PASCD / VehicleSpeedData advertised; the hook sends the sentences |
+
+Every ID is added only when it is not there yet, so a file that something else trimmed is repaired as well, and an ID found in the wrong list is moved to the right one: `0x5203` among the received IDs kept CarPlay from starting ([issue #23](https://github.com/luka-dev/mib2q-carplay-rgi/issues/23)). iOS identifies a feature only when all of its required messages are declared and otherwise rejects the group (accessoryd 27.0 `__checkIdentificationInfo.kMsg*List`; the same rule in 26.1): now playing `0x5000`/`0x5001`/`0x5002`, power `0xAE00`/`0xAE01`/`0xAE02`, location `0xFFFA`/`0xFFFB`/`0xFFFC`, call state `0x4154`/`0x4155`, communications `0x4157`/`0x4158`, list updates `0x4170`/`0x4171`, route guidance `0x5200`–`0x5203` (`0x5204` optional), vehicle status `0xA100`–`0xA102`. The call-control messages are all optional. **[decompile]**
 
 Without the telephony IDs the call screen still works (it comes from stock `DSICarplay`); only the cluster's recents/favorites lists, hold/resume and mic mute are missing. If iOS rejects the telephony IDs in Identify, Cinemo removes them from its identification pool by itself and continues (`OnIdentificationRejected`, `libNmeVfs.so@0xE438C`). **[decompile]**
 
@@ -341,8 +344,10 @@ python3 - dio_manager.json <<'PY'
 import re, sys
 path = sys.argv[1]
 text = open(path).read()
-add = {"MessagesSentByAccessory": ["0x5200", "0x5203", "0x415B", "0x415C", "0x415D", "0x415F", "0x4160", "0x4170", "0xA101"],
-       "MessagesReceivedFromDevice": ["0x5201", "0x5202", "0x5204", "0x4171", "0xA100", "0xA102"]}
+add = {"MessagesSentByAccessory": ["0x5000", "0x5002", "0xAE00", "0xAE02", "0xFFFB", "0x4154", "0x4157", "0x415B", "0x415C",
+                                   "0x415D", "0x415F", "0x4160", "0x4170", "0x5200", "0x5203", "0xA101"],
+       "MessagesReceivedFromDevice": ["0x5001", "0xAE01", "0xFFFA", "0xFFFC", "0x4155", "0x4158", "0x4171", "0x5201", "0x5202",
+                                      "0x5204", "0xA100", "0xA102"]}
 for key, ids in add.items():
     m = re.search(r'"%s"\s*:\s*\[([^\]]*)\]' % key, text)
     have = [h.upper() for h in re.findall(r'"(0x[0-9A-Fa-f]+)"', m.group(1))]

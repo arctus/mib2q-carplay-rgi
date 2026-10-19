@@ -9,7 +9,7 @@
 #   - in-place runtime patches (per-unit / stock-dependent), done here:
 #       * smartphone_integrator.json  - replace the "carplay" child by path
 #       * pf profiles                 - widen the CarPlay TCP rule (MANDATORY)
-#       * dio_manager.json            - register the iAP2 route-guidance message IDs
+#       * dio_manager.json            - register every iAP2 message ID the hook relies on
 #       * NCM start/stop + usblauncher_otg.lua - only over the exact stock they replace
 #       * SI usb.otgStackCleanupScript -> our generation-aware NCM cleanup
 # No CRC gymnastics, no lock dir. Atomic renames. Upgrade-safe: a stock backup is
@@ -355,12 +355,33 @@ add_ids() {   # $1 = line holding one list, rest = IDs; prints the new line
     done
     printf '%s\n' "$l"
 }
-# iAP2 messages the hook needs Cinemo to declare in Identify: route guidance
-# (0x52xx), telephony (0x415B/0x415C/0x415D AcceptCall/EndCall/SwapCalls, 0x415F/0x4160
-# Hold/MuteStatusUpdate, 0x4170/0x4171 ListUpdates) and vehicle status (0xA100/0xA102
-# Start/StopVehicleStatusUpdates from the phone, 0xA101 VehicleStatusUpdate from the hook).
-DIO_SENT_IDS="0x5200 0x5203 0x415B 0x415C 0x415D 0x415F 0x4160 0x4170 0xA101"
-DIO_RECV_IDS="0x5201 0x5202 0x5204 0x4171 0xA100 0xA102"
+del_ids() {   # $1 = line holding one list, rest = IDs that belong to the other list; prints the new line
+    l=$1; shift
+    for id in "$@"; do
+        q="\"$id\""
+        case $l in
+            *", $q"*) l=${l%%", $q"*}${l#*", $q"} ;;
+            *"$q, "*) l=${l%%"$q, "*}${l#*"$q, "} ;;
+            *"$q"*)   l=${l%%"$q"*}${l#*"$q"} ;;
+        esac
+    done
+    printf '%s\n' "$l"
+}
+# Every iAP2 message the hook relies on, stock ones included: each is added only when missing,
+# so a dio_manager.json that something else trimmed is repaired too; an ID found in the wrong
+# list is moved (0x5203 among the received IDs kept CarPlay from starting, issue #23).  iOS identifies a feature
+# only when every REQUIRED message of its group is declared, and rejects the group otherwise
+# (accessoryd 27.0 __checkIdentificationInfo.kMsg*List, same rule in 26.1); required = *:
+#   now playing (cover art)  sent 0x5000* 0x5002*          received 0x5001*
+#   power (phone battery)    sent 0xAE00* 0xAE02*          received 0xAE01*
+#   location (PASCD)         sent 0xFFFB*                  received 0xFFFA* 0xFFFC*
+#   call state / comms       sent 0x4154* 0x4157*          received 0x4155* 0x4158*
+#   call control             sent 0x415B 0x415C 0x415D 0x415F 0x4160 (Accept/End/Swap/Hold/Mute)
+#   list updates             sent 0x4170*                  received 0x4171*
+#   route guidance           sent 0x5200* 0x5203*          received 0x5201* 0x5202* 0x5204
+#   vehicle status           sent 0xA101*                  received 0xA100* 0xA102*
+DIO_SENT_IDS="0x5000 0x5002 0xAE00 0xAE02 0xFFFB 0x4154 0x4157 0x415B 0x415C 0x415D 0x415F 0x4160 0x4170 0x5200 0x5203 0xA101"
+DIO_RECV_IDS="0x5001 0xAE01 0xFFFA 0xFFFC 0x4155 0x4158 0x4171 0x5201 0x5202 0x5204 0xA100 0xA102"
 # "nmea":"0xNNNN" is the NMEA bitmask dio advertises in Identify (LocationInformationComponent).
 # Bit 0x08 = PASCD (VehicleSpeedData): the hook supplies the wheel-speed sentences.
 add_nmea_speed() {   # $1 = line; prints the new line
@@ -375,9 +396,9 @@ patch_dio() {
         case $line in
             *'##'*) new=$line ;;
             *'"MessagesSentByAccessory":['*']'*)
-                sent=$((sent+1)); new=$(add_ids "$line" $DIO_SENT_IDS) ;;
+                sent=$((sent+1)); new=$(add_ids "$(del_ids "$line" $DIO_RECV_IDS)" $DIO_SENT_IDS) ;;
             *'"MessagesReceivedFromDevice":['*']'*)
-                recv=$((recv+1)); new=$(add_ids "$line" $DIO_RECV_IDS) ;;
+                recv=$((recv+1)); new=$(add_ids "$(del_ids "$line" $DIO_SENT_IDS)" $DIO_RECV_IDS) ;;
             *'"nmea":"0x'*)
                 new=$(add_nmea_speed "$line") ;;
             *) new=$line ;;
@@ -393,7 +414,7 @@ patch_dio() {
     [ "$n" = "$want" ] || { echo "  WARN dio_manager.json: only $n/$want IDs after edit; left as-is"; rm -f "$tmp"; return 1; }
     if [ "$changed" = 0 ]; then echo "  dio_manager.json IDs already registered"; rm -f "$tmp"; return 0; fi
     backup_once "$DIO" "$DIO.carplay-stock" || { rm -f "$tmp"; return 1; }
-    chmod 644 "$tmp"; mv -f "$tmp" "$DIO" && echo "  dio_manager.json route-guidance, telephony and vehicle IDs registered (nmea +PASCD)"
+    chmod 644 "$tmp"; mv -f "$tmp" "$DIO" && echo "  dio_manager.json: all hook message IDs registered (nmea +PASCD)"
 }
 
 # ---- lang_data.zip: the Sound effects "CarPlay UpMix" row texts --------------------------
@@ -430,19 +451,20 @@ patch_lang() {
 # its stock SI.  It always patches the stock copy (.carplay-stock once it exists).
 SI_BIN=/mnt/app/eso/bin/apps/smartphone_integrator
 patch_si() {
-    find_mp || { echo "  WARN no M.I.B. micropython - smartphone_integrator stays stock (no USB error re-arm)"; return 0; }
+    find_mp || { echo "  smartphone_integrator left stock (the USB reconnect fix needs M.I.B. micropython)"; return 0; }
     [ -f "$SI_BIN" ] || { echo "  WARN no $SI_BIN"; return 0; }
     src=$SI_BIN; [ -f "$SI_BIN.carplay-stock" ] && src=$SI_BIN.carplay-stock
     rm -f "$SI_BIN.carplay-new"
     # the SI is read whole (0.8 MB): default micropython heaps are smaller (MemoryError on the unit)
-    "$mp" -X heapsize=8M "$RES/binpatch.py" smartphone_integrator "$src" "$SI_BIN.carplay-new"; rc=$?
+    # binpatch's own messages are for a manual run; the lines below say the same in plain words
+    "$mp" -X heapsize=8M "$RES/binpatch.py" smartphone_integrator "$src" "$SI_BIN.carplay-new" > /dev/null; rc=$?
     case $rc in
         0) backup_once "$SI_BIN" "$SI_BIN.carplay-stock" || { rm -f "$SI_BIN.carplay-new"; return 1; }
            chmod 755 "$SI_BIN.carplay-new" && mv -f "$SI_BIN.carplay-new" "$SI_BIN" ||
                { rm -f "$SI_BIN.carplay-new"; echo "FAILED activate $SI_BIN"; return 1; }
-           echo "  $SI_BIN (USB error re-arm patched in)" ;;
-        3) echo "  $SI_BIN already carries the USB error re-arm" ;;
-        *) rm -f "$SI_BIN.carplay-new"; echo "  WARN smartphone_integrator stays stock (no USB error re-arm)" ;;
+           echo "  $SI_BIN (USB reconnect fix added)" ;;
+        3) echo "  $SI_BIN already has the USB reconnect fix" ;;
+        *) rm -f "$SI_BIN.carplay-new"; echo "  smartphone_integrator left stock (no USB reconnect fix for this firmware)" ;;
     esac
     return 0
 }

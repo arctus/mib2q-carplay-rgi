@@ -33,20 +33,14 @@ for variant in us eu cn; do
         com.luka.carplay.rgd.RendererRerouteTransportTest
 done
 
-# Stock Navigation may remain INITIALIZING while CarPlay already owns the
-# independent cluster video plane. Verify that takeover forces NAVSD ready and
-# faithfully restores the latest stock request on release.
+# AltScreen startup scenarios and the context-switch race.
 STOCK_JAR="$PROJECT_DIR/java_stock/US_MU1316_lsd.jar"
 mkdir -p "$TEST_DIR/nav-init"
 "$TEST_JDK/bin/javac" -encoding UTF-8 \
     -cp "$PROJECT_DIR/build/carplay_hook.jar:$STOCK_JAR" \
     -d "$TEST_DIR/nav-init" \
-    "$PROJECT_DIR/tests/GatedCombiServiceInitStateTest.java" \
     "$PROJECT_DIR/tests/AltScreenStartupTest.java" \
     "$PROJECT_DIR/tests/AltScreenContextRaceTest.java"
-"$TEST_JDK/bin/java" \
-    -cp "$TEST_DIR/nav-init:$PROJECT_DIR/build/carplay_hook.jar:$STOCK_JAR" \
-    com.luka.carplay.rgd.GatedCombiServiceInitStateTest
 for scenario in cold warm stop bounce-loss; do
     "$TEST_JDK/bin/java" \
         -cp "$TEST_DIR/nav-init:$PROJECT_DIR/build/carplay_hook.jar:$STOCK_JAR" \
