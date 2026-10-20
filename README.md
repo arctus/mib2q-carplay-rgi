@@ -14,6 +14,14 @@ _CarPlay for the Audi MHI2Q head unit: the map and route guidance in the Virtual
 > Already stuck on the logo? Follow the
 > [recovery guide](https://github.com/luka-dev/mib2q-carplay-rgi/issues/24#issuecomment-5849641990).
 
+> [!WARNING]
+> **Remove any other CarPlay cluster / AltScreen mod before installing** (MIBSI, the CarPlay AltScreen
+> toolbox, mibr and similar), with its own uninstaller or by reflashing the stock firmware. Only one mod
+> can own the cluster: another one takes the cluster video and rewrites the CarPlay configuration, so you
+> get only the loading logo on the cluster or CarPlay does not connect at all. Its leftovers break this
+> patch the same way ([#39](https://github.com/luka-dev/mib2q-carplay-rgi/issues/39),
+> [#53](https://github.com/luka-dev/mib2q-carplay-rgi/issues/53)).
+
 ---
 
 Production implementation for Audi MHI2Q (MU1316, QNX 6.5 ARMv7):
@@ -246,7 +254,9 @@ and `FUZZ_SECONDS` sets the budget per target. Contracts and limits:
 **Compatibility.** Audi MHI2Q only: the installer reads the firmware version from E2P and stops on
 anything else. On a firmware other than the verified ones (US P5087, ER P5092, CN K1004, JP P1017)
 it stops once with a warning and changes nothing; running it again before the next reboot installs
-anyway. The Java part replaces whole stock HMI classes, so it ships per firmware family and
+anyway. It does the same when another CarPlay cluster mod is installed (MIBSI, the CarPlay AltScreen
+toolbox, mibr): such a mod takes the cluster video and rewrites the CarPlay configuration, so remove it
+with its own uninstaller (or reflash the stock firmware) first. The Java part replaces whole stock HMI classes, so it ships per firmware family and
 is chosen by the region in that version string: US, ER and JP (verified on MU1316 P5087, MU1329
 P5092, MU1017 P1017) get `carplay_hook.jar`, CN (verified on MU1003 K1004) gets
 `carplay_hook_cn.jar`. Any other region installs CarPlay without the Java part (no cluster/HUD

@@ -127,6 +127,20 @@ train_verified() {
 }
 OLD_FW_MARK=/tmp/carplay_unverified_fw_ok
 
+# Another CarPlay cluster mod takes the cluster video and rewrites the CarPlay configuration,
+# so this patch cannot work next to it (#39 mibr, #53 MIBSI).  Refused once like an
+# unverified train; a second run in the same power cycle installs anyway.
+foreign_mods() {   # names of the other CarPlay mods found on the unit, space-separated
+    m=
+    { [ -e /mnt/app/root/mibsi ] || [ -e /mnt/app/eso/lib/libmhi2qcarplaycluster.so ]; } && m="$m MIBSI"
+    [ -e /mnt/app/root/carplay-altscreen ] && m="$m CarPlay-AltScreen"
+    for f in /mnt/app/root/hooks/libaltscreen111_mhi2q.so /mnt/app/mibr-* /mnt/app/root/hooks/mibr-*; do
+        [ -e "$f" ] && { m="$m mibr"; break; }
+    done
+    echo "${m# }"
+}
+FOREIGN_MARK=/tmp/carplay_foreign_mod_ok
+
 backup_once() { [ -e "$2" ] || cp -p "$1" "$2" || { echo "FAILED backup $2"; return 1; }; }
 
 # List every payload file into $2.  Normally from manifest.txt (written by
@@ -526,6 +540,40 @@ EOF
             rm -f "$LIST"; exit 1
         fi
         echo "  WARN firmware $TRAIN is not verified - installing anyway (second run)"
+    fi
+    MODS=$(foreign_mods)
+    if [ -n "$MODS" ]; then
+        if [ ! -f "$FOREIGN_MARK" ]; then
+            : > "$FOREIGN_MARK"
+            cat <<EOF
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+WARNING: ANOTHER CARPLAY MOD IS INSTALLED:
+  $MODS
+
+IT TAKES OVER THE CLUSTER AND THE
+CARPLAY CONFIGURATION, SO THIS PATCH
+CANNOT WORK NEXT TO IT.
+
+REMOVE IT WITH ITS OWN UNINSTALLER
+(OR REFLASH THE STOCK FIRMWARE),
+THEN RUN THIS INSTALL AGAIN.
+
+NOTHING WAS CHANGED.
+
+IF YOU ARE SURE: RUN THE INSTALL AGAIN.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+EOF
+            rm -f "$LIST"; exit 1
+        fi
+        echo "  WARN another CarPlay mod is installed ($MODS) - installing anyway (second run)"
     fi
     JAVA_JAR=$(java_jar)
     if [ -n "$JAVA_JAR" ]; then echo "  Java: $JAVA_JAR"; else
