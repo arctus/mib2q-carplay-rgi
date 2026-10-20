@@ -93,6 +93,22 @@ has carplay_hook_cn.jar && [ ! -e "$U/$JARS/carplay_hook.jar" ] || fail cn "want
 unit; run "cat $T/jp" || fail jp "install failed"
 has carplay_hook.jar && [ ! -e "$U/$JARS/carplay_hook_cn.jar" ] || fail jp "JP: want carplay_hook.jar"
 
+# another CarPlay mod on the unit (MIBSI, the yuedizhibo AltScreen, mibr): the first run only
+# warns and changes nothing, the second installs
+for mod in mnt/app/root/mibsi mnt/app/eso/lib/libmhi2qcarplaycluster.so mnt/app/root/carplay-altscreen \
+           mnt/app/root/hooks/libaltscreen111_mhi2q.so mnt/app/mibr-carplay111.noadvertise; do
+    unit; mkdir -p "$U/${mod%/*}"
+    case $mod in */mibsi|*/carplay-altscreen) mkdir "$U/$mod" ;; *) : > "$U/$mod" ;; esac
+    cp -R "$U" "$T/before"
+    run "cat $T/us" && fail "$mod" "installer did not stop on another CarPlay mod"
+    grep -q 'ANOTHER CARPLAY MOD IS INSTALLED' "$T/log" && grep -q 'RUN THE INSTALL AGAIN' "$T/log" || fail "$mod" "no warning"
+    rm "$U/tmp/carplay_foreign_mod_ok" || fail "$mod" "no marker"
+    diff -r "$T/before" "$U" > /dev/null || fail "$mod" "the unit was changed"
+    rm -rf "$T/before"; : > "$U/tmp/carplay_foreign_mod_ok"
+    run "cat $T/us" || fail "$mod" "second run failed"
+    grep -q 'another CarPlay mod is installed (.*) - installing anyway' "$T/log" && grep -q DONE "$T/log" || fail "$mod" "second run did not install"
+done
+
 # an unverified train (an older US one, or KR): the first run only warns, the second installs
 for f in old kr; do
     unit; cp -R "$U" "$T/before"
@@ -120,4 +136,4 @@ for brand in vw po none; do
     rm -rf "$T/before"
 done
 
-echo "installer end-to-end: US/JP -> carplay_hook.jar, CN -> carplay_hook_cn.jar, SI patched in place on US and CN, NCM lua line-patched (stock/old fence/unknown), deva always replaced, other jar removed, unverified train refused untouched then installed on the second run, other region -> none, VW/Porsche/no E2P refused untouched, 5.1 only on an external amp ($SH) PASS"
+echo "installer end-to-end: US/JP -> carplay_hook.jar, CN -> carplay_hook_cn.jar, SI patched in place on US and CN, NCM lua line-patched (stock/old fence/unknown), deva always replaced, other jar removed, unverified train and another CarPlay mod (MIBSI/AltScreen/mibr) refused untouched then installed on the second run, other region -> none, VW/Porsche/no E2P refused untouched, 5.1 only on an external amp ($SH) PASS"
